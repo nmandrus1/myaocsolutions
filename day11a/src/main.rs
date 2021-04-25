@@ -8,3 +8,5 @@ fn main() {
     //println!("{}x{}", floor.rows, floor.cols);
     println!("{:#?}", floor);
 }
+
+// test
