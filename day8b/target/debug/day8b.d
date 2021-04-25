@@ -1,0 +1,1 @@
+/home/nels/dev/rust/aoc/day8b/target/debug/day8b: /home/nels/dev/rust/aoc/day8b/src/input.txt /home/nels/dev/rust/aoc/day8b/src/main.rs /home/nels/dev/rust/aoc/day8b/src/op.rs /home/nels/dev/rust/aoc/day8b/src/program.rs
