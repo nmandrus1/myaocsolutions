@@ -1,39 +1,36 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Tile {
     Empty,
     Occupied,
     Floor,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Cell {
     pub point: Point,
     pub status: Tile,
-    pub neighbors: Vec<Cell>,
 }
 
 impl Cell {
-    fn new_floor(pos: Point) -> Self {
+    fn new_floor(x: usize, y: usize) -> Self {
         Cell {
-            point: pos,
+            point: Point { x, y },
             status: Tile::Floor,
-            neighbors: Vec::with_capacity(8),
         }
     }
-    fn new_seat(pos: Point) -> Self {
+    fn new_seat(x: usize, y: usize) -> Self {
         Cell {
-            point: pos,
+            point: Point { x, y },
             status: Tile::Empty,
-            neighbors: Vec::with_capacity(8),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Floor {
     pub cells: Vec<Vec<Cell>>,
     pub diffs: u16,
@@ -42,37 +39,60 @@ pub struct Floor {
 }
 
 impl Floor {
-    pub fn surrounding_cells(&self, pos: &Point) -> Vec<Cell> {
-        // if idx is outside bounds dont add cell
-        let max_idx = (self.cols * self.cols) - 1;
-        let moore_cells: Vec<Cell> = Vec::with_capacity(8);
+    pub fn draw(&mut self) {
+        self.cells.iter().for_each(|cell_vec| {
+            cell_vec.iter().for_each(|cell| match cell.status {
+                Tile::Empty => print!("L "),
+                Tile::Floor => print!(". "),
+                Tile::Occupied => print!("# "),
+            });
+            println!("");
+        });
+        println!("");
+    }
 
-        vec![]
+    pub fn update(&mut self) {
+        let (rows, cols) = (self.rows, self.cols);
+        (1..(rows - 1) as usize)
+            .flat_map(|y| (1..(cols - 1) as usize).map(move |x| (x, y)))
+            .for_each(|(x, y)| {
+                if self.surrounding_cells(&self.cells[y][x]) == 0
+                    && self.cells[y][x].status != Tile::Floor
+                {
+                    self.cells[y][x].status = Tile::Occupied;
+                } else if self.surrounding_cells(&self.cells[y][x]) > 3
+                    && self.cells[y][x].status != Tile::Floor
+                {
+                    self.cells[y][x].status = Tile::Empty;
+                }
+            });
+    }
+
+    pub fn surrounding_cells(&self, cell: &Cell) -> u8 {
+        ((cell.point.y - 1)..=(cell.point.y + 1))
+            .flat_map(|y| ((cell.point.x - 1)..=(cell.point.x + 1)).map(move |x| &self.cells[y][x]))
+            .filter(move |c| {
+                ((c.point.x != cell.point.x) && (c.point.y != cell.point.y))
+                    && (c.status == Tile::Occupied)
+            })
+            .count() as u8
     }
 
     pub fn add_border(mut self) -> Self {
+        self.cols += 2;
+        self.rows += 2;
         let cols = self.cols as usize;
         self.cells.iter_mut().enumerate().for_each(|(i, vec)| {
-            vec.insert(0, Cell::new_floor(Point { x: 0, y: i + 1 }));
-            vec.push(Cell::new_floor(Point { x: cols, y: i }));
+            vec.insert(0, Cell::new_floor(0, i + 1));
+            vec.push(Cell::new_floor(cols - 1, i + 1));
         });
 
         let top_row = (0..self.cols)
-            .map(|x| {
-                Cell::new_floor(Point {
-                    x: x as usize,
-                    y: 0,
-                })
-            })
+            .map(|x| Cell::new_floor(x as usize, 0))
             .collect::<Vec<Cell>>();
 
         let bottom_row = (0..self.cols)
-            .map(|x| {
-                Cell::new_floor(Point {
-                    x: x as usize,
-                    y: self.rows as usize,
-                })
-            })
+            .map(|x| Cell::new_floor(x as usize, (self.rows - 1) as usize))
             .collect::<Vec<Cell>>();
 
         self.cells.insert(0, top_row);
@@ -89,8 +109,8 @@ impl Floor {
                     s.chars()
                         .enumerate()
                         .map(move |(x, c)| match c {
-                            'L' => Cell::new_seat(Point { x: x + 1, y: y + 1 }),
-                            '.' => Cell::new_floor(Point { x: x + 1, y: y + 1 }),
+                            'L' => Cell::new_seat(x + 1, y + 1),
+                            '.' => Cell::new_floor(x + 1, y + 1),
                             _ => panic!("Unexpected Char: {}", c),
                         })
                         .collect::<Vec<Cell>>()
